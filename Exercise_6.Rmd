@@ -1,0 +1,215 @@
+---
+title: "Exercise_6"
+author: "Baily"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(ggplot2)
+library(dplyr)
+library(arm)
+library(MASS)
+library(ggfortify)
+library(nlme)
+library(lme4)
+library(lmerTest)
+library(emmeans)
+library(ggtext)
+library(patchwork)
+#library(XQuartz)
+```
+
+
+
+
+
+```{r import dataset }
+Seedling_dataset <- read.csv("Seedling_counts_TibbittGordon_sub.csv")
+
+```
+
+
+
+
+
+
+
+```{r summarize seedling data and plot, message=FALSE}
+summary_seedling <- Seedling_dataset %>%
+  group_by(Species, Year) %>%
+  summarise(n = n(),
+           mean_number=mean(number),
+           se_number=sd(number))
+
+summary_seedling
+
+```
+
+```{r fit mixed model for seedling}
+mixed_seedling <- lmer(number~Species*Year+(1|time.since), data = Seedling_dataset)
+#note syntax for model specification:compact syntax
+anova(mixed_seedling) #gives us tests for fixed effects
+```
+
+
+
+
+
+```{r summary mixed model for seedlings}
+summary(mixed_seedling)
+```
+
+
+
+
+
+```{r check seedling model, fig.width=9.5, fig.height=9, message=FALSE}
+performance::check_model(mixed_seedling) #analogous to autoplot, but for more complex models
+```
+
+
+
+
+
+```{r emmeans}
+#calculate model-adjusted means (e.g. estimated marginal means)
+mixed_seedling_emm <- emmeans(mixed_seedling, "Year", "Species")
+mixed_seedling_emm
+```
+
+
+
+
+
+
+```{r emmeans as dataframe}
+data_emm <- as.data.frame(summary(mixed_seedling_emm))
+#data_emm <- as.data.frame(summary(mixed_animals_emm))[c('season', 'species', 'emmean', 'SE')] #specify columns to print
+data_emm
+#model-adjusted means (emm) are identical to raw means (see above) since nothing really being adjusted in fully balanced experiment.
+```
+
+
+
+
+
+```{r plot Seedling emmeans}
+#relevel factors into intuitive order
+
+p<- ggplot(data_emm, aes(x=Species, y=emmean, group=Year, color=Year)) + 
+  geom_line() +
+  geom_point(size=4)+
+  geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE), width=.2)+
+  labs(title="Seedlings", x="Species", y = "Number of Seedlings")
+p
+```
+
+
+
+
+
+```{r Seedling Species Table}
+summary_seedling_2 <- Seedling_dataset %>%
+  group_by(Species) %>%
+  summarise(n = n(),
+            mean_species=mean(number),
+            se_species=sd(number))
+
+summary_seedling_2
+```
+
+
+There was only 1 count of Poplar Species in 2008 and only 1 seedling was found.
+White Spruce was reported 4 times in 2006 and 2007 at 2 different transects
+
+
+
+
+```{r Yearly contrasts BETWEEN species}
+pairs(emmeans(mixed_seedling, "Species", "Year"))
+```
+
+
+
+
+
+```{r Yearly contrasts WITHIN species, Tukey adjusted}
+pairs(emmeans(mixed_seedling, "Year", "Species"))
+
+```
+
+
+
+
+
+
+```{r all season:species pairwise CONTRASTS}
+emmeans(mixed_seedling_emm, specs = pairwise ~ Year:Species)
+#probably no a priori reason to use this table, but here it is.
+```
+
+
+
+
+Try Again
+
+```{r fit mixed model 2 for seedling}
+mixed_seedling_2 <- lmer(Year~Species*number+(1|time.since), data = Seedling_dataset)
+#note syntax for model specification:compact syntax
+anova(mixed_seedling_2) #gives us tests for fixed effects
+```
+
+```{r summary mixed model 2 for seedlings}
+summary(mixed_seedling_2)
+```
+
+```{r check seedling model 2, fig.width=9.5, fig.height=9, message=FALSE}
+performance::check_model(mixed_seedling_2) #analogous to autoplot, but for more complex models
+```
+
+```{r emmeans 2}
+#calculate model-adjusted means (e.g. estimated marginal means)
+mixed_seedling_emm_2 <- emmeans(mixed_seedling_2, "number", "Species")
+mixed_seedling_emm_2
+```
+
+```{r emmeans 2 as dataframe}
+data_emm_2 <- as.data.frame(summary(mixed_seedling_emm_2))
+#data_emm <- as.data.frame(summary(mixed_animals_emm))[c('season', 'species', 'emmean', 'SE')] #specify columns to print
+data_emm_2
+#model-adjusted means (emm) are identical to raw means (see above) since nothing really being adjusted in fully balanced experiment.
+```
+
+```{r plot 2 Seedling emmeans}
+#relevel factors into intuitive order
+
+p2<- ggplot(data_emm_2, aes(x=Species, y=emmean, group=number, color=number)) + 
+  geom_line() +
+  geom_point(size=4)+
+  geom_errorbar(aes(ymin=emmean-SE, ymax=emmean+SE), width=.2)+
+  labs(title="Seedlings", x="Species", y = "Number of Seedlings")
+p2
+
+```
+
+
+```{r pairs 2}
+pairs(emmeans(mixed_seedling_2, "Species", "number"))
+```
+
+```{r 2}
+pairs(emmeans(mixed_seedling_2, "number", "Species"))
+
+```
+
+```{r pairwise CONTRASTS 2}
+emmeans(mixed_seedling_emm_2, specs = pairwise ~ number:Species)
+#probably no a priori reason to use this table, but here it is.
+```
+
+
+
+
